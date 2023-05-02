@@ -141,7 +141,7 @@ namespace IW4MAdmin.Application.EventParsers
 
             if (timeMatch.Success)
             {
-                if (timeMatch.Values[0].Contains(":"))
+                if (timeMatch.Values[0].Contains(':'))
                 {
                     gameTime = timeMatch
                         .Values
@@ -179,6 +179,16 @@ namespace IW4MAdmin.Application.EventParsers
                     return ParseMatchEndEvent(logLine, gameTime);
                 case GameEvent.EventType.MapChange:
                     return ParseMatchStartEvent(logLine, gameTime);
+            }
+            
+            if (logLine.StartsWith("GSE;"))
+            {
+                return new GameScriptEvent
+                {
+                    ScriptData = logLine,
+                    GameTime = gameTime,
+                    Source = GameEvent.EventSource.Log
+                };
             }
 
             if (eventKey is null || !_customEventRegistrations.ContainsKey(eventKey))
@@ -578,11 +588,15 @@ namespace IW4MAdmin.Application.EventParsers
                 return null;
             }
 
-            var message = matchResult.Values[Configuration.Say.GroupMapping[ParserRegex.GroupType.Message]]
-                .Replace(Configuration.LocalizeText, "")
-                .Trim();
+            var message = new string(matchResult.Values[Configuration.Say.GroupMapping[ParserRegex.GroupType.Message]]
+                .Where(c => !char.IsControl(c)).ToArray());
 
-            if (message.Length <= 0)
+            if (message.StartsWith("/"))
+            {
+                message = message[1..];
+            }
+
+            if (String.IsNullOrEmpty(message))
             {
                 return null;
             }
